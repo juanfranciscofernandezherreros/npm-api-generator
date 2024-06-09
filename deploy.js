@@ -18,13 +18,12 @@ const runCommand = (command) => {
 
 const deploy = async () => {
   try {
-	console.log(await runCommand('cd CryptoPortfolioManager'));
-	console.log(await runCommand('git init'));
-    //console.log(await runCommand('git remote add origin git@github.com:juanfranciscofernandezherreros/nombre-del-repositorio.git'));
-    console.log(await runCommand('git pull origin master'));
+    console.log(await runCommand('git init'));
+    console.log(await runCommand('git remote add origin18 git@github.com:juanfranciscofernandezherreros/CryptoPortfolioManager.git'));
+    console.log(await runCommand('git pull origin18 master --allow-unrelated-histories'));
     console.log(await runCommand('git add .'));
     console.log(await runCommand('git commit -m "Automated commit"'));
-    console.log(await runCommand('git push origin master'));
+    console.log(await runCommand('git push origin18 master --force'));
     console.log('Project successfully deployed!');
   } catch (error) {
     console.error('Deployment failed:', error);
