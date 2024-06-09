@@ -1,9 +1,0 @@
-
-CREATE TABLE movies (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    genre VARCHAR(255) NOT NULL,
-    releaseYear INT NOT NULL,
-    rating DOUBLE NOT NULL
-);
-  
