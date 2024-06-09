@@ -18,6 +18,9 @@ const runCommand = (command) => {
 
 const deploy = async () => {
   try {
+	console.log(await runCommand('cd CryptoPortfolioManager'));
+	console.log(await runCommand('git init'));
+    //console.log(await runCommand('git remote add origin git@github.com:juanfranciscofernandezherreros/nombre-del-repositorio.git'));
     console.log(await runCommand('git pull origin master'));
     console.log(await runCommand('git add .'));
     console.log(await runCommand('git commit -m "Automated commit"'));
