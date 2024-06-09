@@ -21,7 +21,7 @@ const deploy = async () => {
 	await runCommand('git status');
     await runCommand('git add .');
     await runCommand('git commit -m "Automated commit"');
-    await runCommand('git push origin main');
+    await runCommand('git push --set-upstream origin --force master');
     console.log('Project successfully deployed!');
   } catch (error) {
     console.error('Deployment failed:', error);
