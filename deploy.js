@@ -5,23 +5,23 @@ const runCommand = (command) => {
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error(`Error: ${error.message}`);
-        reject(error);
-      }
-      if (stderr) {
+        reject(error.message);
+      } else if (stderr) {
         console.error(`stderr: ${stderr}`);
-        reject(stderr);
+        resolve(stderr);
+      } else {
+        resolve(stdout);
       }
-      resolve(stdout);
     });
   });
 };
 
 const deploy = async () => {
   try {
-	await runCommand('git status');
-    await runCommand('git add .');
-    await runCommand('git commit -m "Automated commit"');
-    await runCommand('git push --set-upstream origin --force master');
+    console.log(await runCommand('git pull origin master'));
+    console.log(await runCommand('git add .'));
+    console.log(await runCommand('git commit -m "Automated commit"'));
+    console.log(await runCommand('git push origin master'));
     console.log('Project successfully deployed!');
   } catch (error) {
     console.error('Deployment failed:', error);
