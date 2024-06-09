@@ -1,0 +1,32 @@
+{
+  "projectName": "CryptoPortfolioManager",
+  "packageName": "com.example.cryptomanager",
+  "appClassName": "CryptoManagerApplication",
+  "entityName": "Cryptocurrency",
+  "repositoryName": "CryptocurrencyRepository",
+  "serviceName": "CryptocurrencyService",
+  "controllerName": "CryptocurrencyController",
+  "exceptionName": "ResourceNotFoundException",
+  "exceptionNameBadRequest": "BadRequestException",
+  "handlerName": "GlobalExceptionHandler",
+  "dtoName": "CryptocurrencyDto",
+  "mapperName": "CryptocurrencyMapper",
+  "entityFields": [
+    {"type": "Long", "name": "id", "isPrimaryKey": "Y"},
+    {"type": "String", "name": "symbol", "isPrimaryKey": "N"},
+    {"type": "String", "name": "name", "isPrimaryKey": "N"},
+    {"type": "Double", "name": "currentPrice", "isPrimaryKey": "N"},
+    {"type": "Double", "name": "marketCap", "isPrimaryKey": "N"},
+    {"type": "Double", "name": "circulatingSupply", "isPrimaryKey": "N"},
+    {"type": "Double", "name": "totalSupply", "isPrimaryKey": "N"},
+    {"type": "Double", "name": "maxSupply", "isPrimaryKey": "N"},
+    {"type": "Double", "name": "change24h", "isPrimaryKey": "N"}
+  ],
+  "tableName": "cryptocurrencies",
+  "urlName": "cryptocurrencies",
+  "databaseConfig": {
+    "username": "sa",
+    "password": "",
+    "host": "jdbc:h2:mem:testdb"
+  }
+}
