@@ -34,12 +34,6 @@ fs.readFile('config.json', 'utf8', (err, data) => {
         });
     };
 
-    // Lógica condicional basada en el número de claves primarias
-    if (primaryKeyCount === 1) {
-        executeScript('api.js', 'config.json');
-    } else if (primaryKeyCount === 2) {
-        executeScript('generatePKCompuesta.js', 'config.json');
-    } else {
-        console.log(`Hay ${primaryKeyCount} claves primarias.`);
-    }
+    executeScript('apiUnique.js', 'config.json')
+
 });

@@ -1,34 +1,16 @@
 const fs = require('fs');
 const path = require('path');
 
-// Configuración de la base de datos y entidad
-const config = {
-  "packageName": "com.example.store",
-  "projectName": "StoreProject",
-  "name": "product",
-  "urlName": "products",
-  "entityName": "Product",
-  "repositoryName": "ProductRepository",
-  "serviceName": "ProductService",
-  "controllerName": "ProductController",
-  "exceptionName": "ResourceNotFoundException",
-  "handlerName": "GlobalExceptionHandler",
-  "appClassName": "StoreApplication",
-  "testClassName": "StoreApplicationTests",
-  "primaryKeyField": "productId",
-  "tableName": "products",
-  "databaseConfig": {
-    "username": "sa",
-    "password": "password",
-    "host": "jdbc:h2:mem:testdb"
-  },
-  "entityFields": [
-    { "name": "productId", "type": "String" },
-    { "name": "name", "type": "String" },
-    { "name": "description", "type": "String" },
-    { "name": "price", "type": "BigDecimal" }
-  ]
-};
+// Obtener la ruta del archivo JSON desde los argumentos de la línea de comandos
+const configPath = process.argv[2];
+
+if (!configPath) {
+  console.error('No se ha proporcionado la ruta del archivo de configuración.');
+  process.exit(1);
+}
+
+// Leer configuración desde archivo JSON
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
 // Función para convertir el nombre del paquete en una ruta de directorio
 const packageToPath = (packageName) => {
@@ -43,7 +25,8 @@ const subDirs = [
   'repository',
   'service',
   'config',
-  'filter'
+  'dto',
+  'mapper'
 ];
 
 // Construir directorios usando el nombre del paquete
@@ -86,11 +69,11 @@ const generatePomXml = () => {
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://www.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.example</groupId>
-    <artifactId>store</artifactId>
+    <groupId>${config.packageName}</groupId>
+    <artifactId>${config.projectName.toLowerCase()}</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <name>store</name>
+    <name>${config.projectName}</name>
     <description>Demo project for Spring Boot with H2 Database</description>
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -124,9 +107,30 @@ const generatePomXml = () => {
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- SpringDoc OpenAPI dependency -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-logging</artifactId>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-ui</artifactId>
+            <version>1.6.15</version>
+        </dependency>
+        <!-- Lombok dependency -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.20</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- MapStruct dependencies -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>1.4.2.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct-processor</artifactId>
+            <version>1.4.2.Final</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
     <build>
@@ -134,6 +138,30 @@ const generatePomXml = () => {
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <source>11</source>
+                    <target>11</target>
+                    <compilerArgs>
+                        <arg>-Xlint:unchecked</arg>
+                    </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.20</version>
+                        </path>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                            <version>1.4.2.Final</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
             </plugin>
         </plugins>
     </build>
@@ -164,7 +192,7 @@ logging.level.${config.packageName}=INFO
   writeToFile(`${projectDir}/src/main/resources/application.properties`, content);
 };
 
-// Generar StoreApplication.java
+// Generar CryptoManagerApplication.java
 const generateAppClass = () => {
   const { packageName, appClassName } = config;
   const content = `
@@ -184,59 +212,66 @@ public class ${appClassName} {
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/${appClassName}.java`, content);
 };
 
-// Generar Product.java
+// Generar Cryptocurrency.java
 const generateModel = () => {
-  const { packageName, entityName, primaryKeyField, entityFields, tableName } = config;
-  const fields = entityFields.map(field => `    private ${field.type} ${field.name};`).join('\n');
-  const gettersSetters = entityFields.map(field => `
-    public ${field.type} get${capitalize(field.name)}() {
-        return ${field.name};
-    }
+  const { packageName, entityName, entityFields, tableName } = config;
 
-    public void set${capitalize(field.name)}(${field.type} ${field.name}) {
-        this.${field.name} = ${field.name};
+  const fields = entityFields.map(field => {
+    let annotations = '';
+    if (field.isPrimaryKey === 'Y') {
+      annotations += '    @Id\n';
+      if (field.isAutoIncrement === 'Y') {
+        annotations += '    @GeneratedValue(strategy = GenerationType.IDENTITY)\n';
+      }
     }
-  `).join('\n');
+    if (field.isNotNull === 'Y') {
+      annotations += '    @Column(nullable = false)\n';
+    }
+    return `${annotations}    private ${field.type} ${field.name};`;
+  }).join('\n');
 
   const content = `
 package ${packageName}.model;
 
 import javax.persistence.*;
-import java.math.BigDecimal;
+import lombok.Data;
 
 @Entity
 @Table(name = "${tableName}")
+@Data
 public class ${entityName} {
-
-    @Id
-    private ${config.entityFields.find(f => f.name === primaryKeyField).type} ${primaryKeyField};
 
 ${fields}
 
-${gettersSetters}
 }
 `;
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/model/${entityName}.java`, content);
 };
 
-// Generar ProductRepository.java
+// Generar CryptocurrencyRepository.java
 const generateRepository = () => {
-  const { packageName, repositoryName, entityName, primaryKeyField } = config;
+  const { packageName, repositoryName, entityName, entityFields } = config;
+
+  const primaryKey = entityFields.find(field => field.isPrimaryKey === 'Y');
+
   const content = `
 package ${packageName}.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import ${packageName}.model.${entityName};
 
-public interface ${repositoryName} extends JpaRepository<${entityName}, ${config.entityFields.find(f => f.name === primaryKeyField).type}> {
+public interface ${repositoryName} extends JpaRepository<${entityName}, ${primaryKey.type}> {
 }
 `;
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/repository/${repositoryName}.java`, content);
 };
 
-// Generar ProductService.java
+// Generar CryptocurrencyService.java
 const generateService = () => {
-  const { packageName, serviceName, repositoryName, entityName, primaryKeyField } = config;
+  const { packageName, serviceName, repositoryName, entityName, entityFields } = config;
+
+  const primaryKey = entityFields.find(field => field.isPrimaryKey === 'Y');
+
   const content = `
 package ${packageName}.service;
 
@@ -252,27 +287,29 @@ public class ${serviceName} {
     @Autowired
     private ${repositoryName} ${repositoryName.substring(0, 1).toLowerCase() + repositoryName.substring(1)};
 
-    public ${entityName} findById(${config.entityFields.find(f => f.name === primaryKeyField).type} id) throws ${config.exceptionName} {
-        return ${repositoryName.substring(0, 1).toLowerCase() + repositoryName.substring(1)}.findById(id)
-                .orElseThrow(() -> new ${config.exceptionName}("${entityName} not found with id: " + id));
+    public ${entityName} findById(${primaryKey.type} ${primaryKey.name}) throws ${config.exceptionName} {
+        return ${repositoryName.substring(0, 1).toLowerCase() + repositoryName.substring(1)}.findById(${primaryKey.name})
+                .orElseThrow(() -> new ${config.exceptionName}("${entityName} not found with id: " + ${primaryKey.name}));
     }
 }
 `;
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/service/${serviceName}.java`, content);
 };
 
-// Generar ProductController.java
+// Generar CryptocurrencyController.java
 const generateController = () => {
-  const { packageName, controllerName, serviceName, entityName, primaryKeyField, urlName } = config;
-  const primaryKeyType = config.entityFields.find(f => f.name === primaryKeyField).type;
-  
+  const { packageName, controllerName, serviceName, entityName, urlName, entityFields } = config;
+
+  const primaryKey = entityFields.find(field => field.isPrimaryKey === 'Y');
+
   const content = `
 package ${packageName}.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ${packageName}.model.${entityName};
+import ${packageName}.dto.${entityName}Dto;
+import ${packageName}.mapper.${entityName}Mapper;
 import ${packageName}.service.${serviceName};
 
 @RestController
@@ -282,14 +319,53 @@ public class ${controllerName} {
     @Autowired
     private ${serviceName} ${serviceName.substring(0, 1).toLowerCase() + serviceName.substring(1)};
 
+    @Autowired
+    private ${entityName}Mapper ${entityName.toLowerCase()}Mapper;
+
     @GetMapping("/{id}")
-    public ResponseEntity<${entityName}> findById(@PathVariable ${primaryKeyType} id) {
-        ${entityName} ${entityName.substring(0, 1).toLowerCase() + entityName.substring(1)} = ${serviceName.substring(0, 1).toLowerCase() + serviceName.substring(1)}.findById(id);
-        return ResponseEntity.ok(${entityName.substring(0, 1).toLowerCase() + entityName.substring(1)});
+    public ResponseEntity<${entityName}Dto> findById(@PathVariable ${primaryKey.type} ${primaryKey.name}) {
+        return ResponseEntity.ok(${entityName.toLowerCase()}Mapper.toDto(${serviceName.substring(0, 1).toLowerCase() + serviceName.substring(1)}.findById(${primaryKey.name})));
     }
 }
 `;
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/controller/${controllerName}.java`, content);
+};
+
+// Generar CryptocurrencyDto.java
+const generateDto = () => {
+  const { packageName, dtoName, entityFields } = config;
+  const fields = entityFields.map(field => `    private ${field.type} ${field.name};`).join('\n');
+
+  const content = `
+package ${packageName}.dto;
+
+import lombok.Data;
+
+@Data
+public class ${dtoName} {
+${fields}
+}
+`;
+  writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/dto/${dtoName}.java`, content);
+};
+
+// Generar CryptocurrencyMapper.java
+const generateMapper = () => {
+  const { packageName, entityName, dtoName } = config;
+  const content = `
+package ${packageName}.mapper;
+
+import ${packageName}.dto.${dtoName};
+import ${packageName}.model.${entityName};
+import org.mapstruct.Mapper;
+
+@Mapper(componentModel = "spring")
+public interface ${entityName}Mapper {
+    ${dtoName} toDto(${entityName} entity);
+    ${entityName} toEntity(${dtoName} dto);
+}
+`;
+  writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/mapper/${entityName}Mapper.java`, content);
 };
 
 // Generar ResourceNotFoundException.java
@@ -307,9 +383,24 @@ public class ${exceptionName} extends RuntimeException {
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/exception/${exceptionName}.java`, content);
 };
 
+// Generar BadRequestException.java
+const generateBadRequestException = () => {
+  const { packageName, exceptionNameBadRequest } = config;
+  const content = `
+package ${packageName}.exception;
+
+public class ${exceptionNameBadRequest} extends RuntimeException {
+    public ${exceptionNameBadRequest}(String message) {
+        super(message);
+    }
+}
+`;
+  writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/exception/${exceptionNameBadRequest}.java`, content);
+};
+
 // Generar GlobalExceptionHandler.java
 const generateExceptionHandler = () => {
-  const { packageName, handlerName, exceptionName } = config;
+  const { packageName, handlerName, exceptionName, exceptionNameBadRequest } = config;
   const content = `
 package ${packageName}.exception;
 
@@ -317,7 +408,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @ControllerAdvice
 public class ${handlerName} {
@@ -327,82 +418,64 @@ public class ${handlerName} {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
     }
 
-    @ExceptionHandler(NoHandlerFoundException.class)
-    public ResponseEntity<String> handleNoHandlerFoundException(NoHandlerFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No handler found for " + ex.getHttpMethod() + " " + ex.getRequestURL());
+    @ExceptionHandler(${exceptionNameBadRequest}.class)
+    public ResponseEntity<String> handleBadRequestException(${exceptionNameBadRequest} ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<String> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException ex) {
+        String message = String.format("The parameter '%s' of value '%s' could not be converted to type '%s'", 
+ex.getName(), ex.getValue(), ex.getRequiredType().getSimpleName());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(message);
     }
 }
 `;
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/exception/${handlerName}.java`, content);
 };
 
-// Generar LoggingFilter.java
-const generateLoggingFilter = () => {
-  const { packageName } = config;
-  const content = `
-package ${packageName}.filter;
-
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import org.springframework.stereotype.Component;
-import javax.servlet.Filter;
-import java.io.IOException;
-import java.util.logging.Logger;
-
-@Component
-public class LoggingFilter implements Filter {
-
-    private static final Logger logger = Logger.getLogger(LoggingFilter.class.getName());
-
-    @Override
-    public void init(FilterConfig filterConfig) throws ServletException {
-        // No initialization required
-    }
-
-    @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-            throws IOException, ServletException {
-        HttpServletRequest req = (HttpServletRequest) request;
-        logger.info("Incoming request: " + req.getMethod() + " " + req.getRequestURI());
-        chain.doFilter(request, response);
-        logger.info("Outgoing response for: " + req.getMethod() + " " + req.getRequestURI());
-    }
-
-    @Override
-    public void destroy() {
-        // No cleanup required
-    }
-}
-`;
-  writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/filter/LoggingFilter.java`, content);
-};
-
 // Generar schema.sql
 const generateSchemaSql = () => {
-  const { tableName } = config;
+  const { tableName, entityFields } = config;
+
+  const columns = entityFields.map(field => {
+    let columnDefinition = `${field.name} ${mapJavaTypeToSqlType(field.type)}`;
+    if (field.isNotNull === 'Y') {
+      columnDefinition += ' NOT NULL';
+    }
+    return columnDefinition;
+  }).join(',\n    ');
+
+  const primaryKey = entityFields
+    .filter(field => field.isPrimaryKey === 'Y')
+    .map(field => field.name)
+    .join(', ');
+
   const content = `
 CREATE TABLE ${tableName} (
-    product_id VARCHAR(255) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    description VARCHAR(255) NOT NULL,
-    price DECIMAL(10, 2) NOT NULL,
-    PRIMARY KEY (product_id)
+    ${columns},
+    PRIMARY KEY (${primaryKey})
 );
   `;
   writeToFile(`${projectDir}/src/main/resources/schema.sql`, content);
 };
 
+// Función para mapear tipos de Java a tipos de SQL
+const mapJavaTypeToSqlType = (javaType) => {
+  const typeMap = {
+    "Long": "BIGINT",
+    "String": "VARCHAR(255)",
+    "Double": "DOUBLE"
+  };
+  return typeMap[javaType] || javaType.toUpperCase();
+};
+
 // Generar data.sql
 const generateDataSql = () => {
-  const { tableName } = config;
   const content = `
-INSERT INTO ${tableName} (product_id, name, description, price) VALUES
-('A', 'Laptop', 'High performance laptop', 1500.99),
-('B', 'Smartphone', 'Latest model smartphone', 999.99);
+INSERT INTO cryptocurrencies (id, symbol, names, currentprice, marketcap, circulatingsupply, totalsupply, maxsupply, change24h) VALUES
+(1, 'BTC', 'Bitcoin', 60000.0, 1200000000000.0, 19000000.0, 21000000.0, 21000000.0, -2.5),
+(2, 'ETH', 'Ethereum', 4000.0, 500000000000.0, 115000000.0, 115000000.0, NULL, -1.5);
   `;
   writeToFile(`${projectDir}/src/main/resources/data.sql`, content);
 };
@@ -416,11 +489,13 @@ const generateProjectFiles = () => {
   generateRepository();
   generateService();
   generateController();
+  generateDto();
+  generateMapper();
   generateException();
+  generateBadRequestException();
   generateExceptionHandler();
-  generateLoggingFilter();
-  generateDataSql();
   generateSchemaSql();
+  generateDataSql();
 };
 
 generateProjectFiles();

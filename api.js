@@ -144,6 +144,11 @@ const generatePomXml = () => {
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
+                    <source>11</source>
+                    <target>11</target>
+                    <compilerArgs>
+                        <arg>-Xlint:unchecked</arg>
+                    </compilerArgs>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -187,7 +192,7 @@ logging.level.${config.packageName}=INFO
   writeToFile(`${projectDir}/src/main/resources/application.properties`, content);
 };
 
-// Generar MovieLibraryApplication.java
+// Generar CryptoManagerApplication.java
 const generateAppClass = () => {
   const { packageName, appClassName } = config;
   const content = `
@@ -207,23 +212,76 @@ public class ${appClassName} {
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/${appClassName}.java`, content);
 };
 
-// Generar Movie.java
+// Generar CryptocurrencyId.java
+const generateCryptocurrencyId = () => {
+  const { packageName, entityName, entityFields } = config;
+
+  const primaryKeyFields = entityFields
+    .filter(field => field.isPrimaryKey === 'Y')
+    .map(field => `    private ${field.type} ${field.name};`)
+    .join('\n');
+
+  const primaryKeyGettersAndSetters = entityFields
+    .filter(field => field.isPrimaryKey === 'Y')
+    .map(field => `
+    public ${field.type} get${capitalize(field.name)}() {
+        return ${field.name};
+    }
+
+    public void set${capitalize(field.name)}(${field.type} ${field.name}) {
+        this.${field.name} = ${field.name};
+    }`)
+    .join('\n');
+
+  const content = `
+package ${packageName}.model;
+
+import java.io.Serializable;
+import javax.persistence.Embeddable;
+import lombok.Data;
+
+@Embeddable
+@Data
+public class ${entityName}Id implements Serializable {
+
+${primaryKeyFields}
+
+${primaryKeyGettersAndSetters}
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ${entityName}Id that = (${entityName}Id) o;
+
+        // Check all fields for equality
+        return ${entityFields.filter(field => field.isPrimaryKey === 'Y').map(field => `this.${field.name}.equals(that.${field.name})`).join(' && ')};
+    }
+
+    @Override
+    public int hashCode() {
+        int result = ${entityFields.filter(field => field.isPrimaryKey === 'Y').map(field => `this.${field.name}.hashCode()`).join(' ^ ')};
+        return result;
+    }
+}
+`;
+  writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/model/${entityName}Id.java`, content);
+};
+
+// Generar Cryptocurrency.java
 const generateModel = () => {
   const { packageName, entityName, entityFields, tableName } = config;
 
-  const fields = entityFields.map(field => {
-    let annotations = '';
-    if (field.isPrimaryKey === 'Y') {
-      annotations += '    @Id\n';
-      if (field.isAutoIncrement === 'Y') {
-        annotations += '    @GeneratedValue(strategy = GenerationType.IDENTITY)\n';
+  const nonPrimaryKeyFields = entityFields
+    .filter(field => field.isPrimaryKey !== 'Y')
+    .map(field => {
+      let annotations = '';
+      if (field.isNotNull === 'Y') {
+        annotations += '    @Column(nullable = false)\n';
       }
-    }
-    if (field.isNotNull === 'Y') {
-      annotations += '    @Column(nullable = false)\n';
-    }
-    return `${annotations}    private ${field.type} ${field.name};`;
-  }).join('\n');
+      return `${annotations}    private ${field.type} ${field.name};`;
+    }).join('\n');
 
   const content = `
 package ${packageName}.model;
@@ -236,55 +294,76 @@ import lombok.Data;
 @Data
 public class ${entityName} {
 
-${fields}
+    @EmbeddedId
+    private ${entityName}Id id;
+
+${nonPrimaryKeyFields}
 
 }
 `;
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/model/${entityName}.java`, content);
 };
 
+// Generar CryptocurrencyKey.java dinámicamente
+const generateCryptocurrencyKey = () => {
+  const { packageName, entityFields } = config;
+  
+  const primaryKeys = entityFields
+    .filter(field => field.isPrimaryKey === 'Y')
+    .map(field => `    private ${field.type} ${field.name};`)
+    .join('\n');
 
-// Generar MovieRepository.java
+  const content = `
+package ${packageName}.dto;
+
+import lombok.Data;
+
+@Data
+public class CryptocurrencyKey {
+${primaryKeys}
+}
+`;
+  writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/dto/CryptocurrencyKey.java`, content);
+};
+
+// Generar CryptocurrencyRepository.java
 const generateRepository = () => {
   const { packageName, repositoryName, entityName } = config;
+
   const content = `
 package ${packageName}.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import ${packageName}.model.${entityName};
+import ${packageName}.model.${entityName}Id;
 
-public interface ${repositoryName} extends JpaRepository<${entityName}, Long> {
+
+public interface ${repositoryName} extends JpaRepository<${entityName}, ${entityName}Id> {
 }
 `;
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/repository/${repositoryName}.java`, content);
 };
 
-// Generar MovieService.java
+// Generar CryptocurrencyService.java
 const generateService = () => {
-  const { packageName, serviceName, repositoryName, entityName, idType, idField } = config;
+  const { packageName, serviceName, repositoryName, entityName, entityFields } = config;
+  
+  const primaryKeySetters = entityFields
+    .filter(field => field.isPrimaryKey === 'Y')
+    .map(field => `        id.set${capitalize(field.name)}(key.get${capitalize(field.name)}());`)
+    .join('\n');
+
   const content = `
 package ${packageName}.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Example;
 import org.springframework.stereotype.Service;
+import ${packageName}.dto.CryptocurrencyKey;
 import ${packageName}.model.${entityName};
+import ${packageName}.model.${entityName}Id;
 import ${packageName}.repository.${repositoryName};
-import ${packageName}.exception.${config.exceptionName};
-import java.util.List;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Predicate;
-import javax.persistence.criteria.Root;
-import javax.persistence.criteria.Expression;
-import java.util.ArrayList;
-import java.util.Map;
-import ${packageName}.dto.${entityName}GroupedDTO;
+import ${packageName}.exception.ResourceNotFoundException;
 
 @Service
 public class ${serviceName} {
@@ -292,161 +371,34 @@ public class ${serviceName} {
     @Autowired
     private ${repositoryName} ${repositoryName.substring(0, 1).toLowerCase() + repositoryName.substring(1)};
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    public ${entityName} findByKeys(CryptocurrencyKey key) throws ResourceNotFoundException {
+        ${entityName}Id id = new ${entityName}Id();
+${primaryKeySetters}
+        ${entityName} probe = new ${entityName}();
+        probe.setId(id);
+        Example<${entityName}> example = Example.of(probe);
 
-    public ${entityName} findById(${idType} ${idField}) throws ${config.exceptionName} {
-        return ${repositoryName.substring(0, 1).toLowerCase() + repositoryName.substring(1)}.findById(${idField})
-                .orElseThrow(() -> new ${config.exceptionName}("${entityName} not found with id: " + ${idField}));
-    }
-
-    public List<${entityName}> findAll() {
-        return ${repositoryName.substring(0, 1).toLowerCase() + repositoryName.substring(1)}.findAll();
-    }
-
-    public Page<${entityName}> filterMovies(Map<String, Map<String, Object>> filters, Pageable pageable) {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<${entityName}> query = cb.createQuery(${entityName}.class);
-        Root<${entityName}> root = query.from(${entityName}.class);
-
-        List<Predicate> predicates = new ArrayList<>();
-
-        filters.forEach((field, operations) -> {
-            operations.forEach((operator, value) -> {
-                switch (operator) {
-                    case "eq":
-                        predicates.add(cb.equal(root.get(field), value));
-                        break;
-                    case "neq":
-                        predicates.add(cb.notEqual(root.get(field), value));
-                        break;
-                    case "gt":
-                        predicates.add(cb.greaterThan(root.get(field), (Comparable) value));
-                        break;
-                    case "lt":
-                        predicates.add(cb.lessThan(root.get(field), (Comparable) value));
-                        break;
-                    case "gte":
-                        predicates.add(cb.greaterThanOrEqualTo(root.get(field), (Comparable) value));
-                        break;
-                    case "lte":
-                        predicates.add(cb.lessThanOrEqualTo(root.get(field), (Comparable) value));
-                        break;
-                    case "like":
-                        predicates.add(cb.like(root.get(field), "%" + value + "%"));
-                        break;
-                    case "in":
-                        predicates.add(root.get(field).in((List<?>) value));
-                        break;
-                    case "notIn":
-                        predicates.add(cb.not(root.get(field).in((List<?>) value)));
-                        break;
-                    case "isNull":
-                        if ((Boolean) value) {
-                            predicates.add(cb.isNull(root.get(field)));
-                        }
-                        break;
-                    case "isNotNull":
-                        if ((Boolean) value) {
-                            predicates.add(cb.isNotNull(root.get(field)));
-                        }
-                        break;
-                    // Agrega más operadores según sea necesario
-                }
-            });
-        });
-
-        query.where(predicates.toArray(new Predicate[0]));
-
-        List<${entityName}> resultList = entityManager.createQuery(query)
-                .setFirstResult((int) pageable.getOffset())
-                .setMaxResults(pageable.getPageSize())
-                .getResultList();
-
-        CriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
-        Root<${entityName}> countRoot = countQuery.from(${entityName}.class);
-        countQuery.select(cb.count(countRoot)).where(predicates.toArray(new Predicate[0]));
-        Long count = entityManager.createQuery(countQuery).getSingleResult();
-
-        return new PageImpl<>(resultList, pageable, count);
-    }
-
-    public List<${entityName}GroupedDTO> groupByField(String groupByField, Map<String, Map<String, Object>> filters) {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<${entityName}GroupedDTO> query = cb.createQuery(${entityName}GroupedDTO.class);
-        Root<${entityName}> root = query.from(${entityName}.class);
-
-        List<Predicate> predicates = new ArrayList<>();
-
-        filters.forEach((field, operations) -> {
-            operations.forEach((operator, value) -> {
-                switch (operator) {
-                    case "eq":
-                        predicates.add(cb.equal(root.get(field), value));
-                        break;
-                    case "neq":
-                        predicates.add(cb.notEqual(root.get(field), value));
-                        break;
-                    case "gt":
-                        predicates.add(cb.greaterThan(root.get(field), (Comparable) value));
-                        break;
-                    case "lt":
-                        predicates.add(cb.lessThan(root.get(field), (Comparable) value));
-                        break;
-                    case "gte":
-                        predicates.add(cb.greaterThanOrEqualTo(root.get(field), (Comparable) value));
-                        break;
-                    case "lte":
-                        predicates.add(cb.lessThanOrEqualTo(root.get(field), (Comparable) value));
-                        break;
-                    case "like":
-                        predicates.add(cb.like(root.get(field), "%" + value + "%"));
-                        break;
-                    case "in":
-                        predicates.add(root.get(field).in((List<?>) value));
-                        break;
-                    case "notIn":
-                        predicates.add(cb.not(root.get(field).in((List<?>) value)));
-                        break;
-                    case "isNull":
-                        if ((Boolean) value) {
-                            predicates.add(cb.isNull(root.get(field)));
-                        }
-                        break;
-                    case "isNotNull":
-                        if ((Boolean) value) {
-                            predicates.add(cb.isNotNull(root.get(field)));
-                        }
-                        break;
-                    // Agrega más operadores según sea necesario
-                }
-            });
-        });
-
-        query.where(predicates.toArray(new Predicate[0]));
-
-        Expression<String> groupByExpression = root.get(groupByField);
-        query.multiselect(groupByExpression, cb.count(root));
-        query.groupBy(groupByExpression);
-
-        return entityManager.createQuery(query).getResultList();
+        return ${repositoryName.substring(0, 1).toLowerCase() + repositoryName.substring(1)}.findOne(example)
+                .orElseThrow(() -> new ResourceNotFoundException("${entityName} not found with provided keys"));
     }
 }
 `;
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/service/${serviceName}.java`, content);
 };
 
-// Generar MovieController.java
+// Generar CryptocurrencyController.java
 const generateController = () => {
   const { packageName, controllerName, serviceName, entityName, urlName, entityFields } = config;
-  
-  // Encontrar el campo que es clave primaria
-  const idField = entityFields.find(field => field.isPrimaryKey === 'Y');
 
-  if (!idField) {
-    console.error('No se encontró ningún campo que sea clave primaria.');
-    return;
-  }
+  const requestParams = entityFields
+    .filter(field => field.isPrimaryKey === 'Y')
+    .map(field => `            @RequestParam(required = false) ${field.type} ${field.name}`)
+    .join(',\n');
+
+  const keySetters = entityFields
+    .filter(field => field.isPrimaryKey === 'Y')
+    .map(field => `        key.set${capitalize(field.name)}(${field.name});`)
+    .join('\n');
 
   const content = `
 package ${packageName}.controller;
@@ -454,17 +406,10 @@ package ${packageName}.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ${packageName}.dto.CryptocurrencyKey;
 import ${packageName}.dto.${entityName}Dto;
-import ${packageName}.dto.${entityName}GroupedDTO;
 import ${packageName}.mapper.${entityName}Mapper;
 import ${packageName}.service.${serviceName};
-import java.util.stream.Collectors;
-import java.util.List;
-import java.util.Map;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import ${packageName}.model.${entityName};
 
 @RestController
 @RequestMapping("/${urlName}")
@@ -476,32 +421,19 @@ public class ${controllerName} {
     @Autowired
     private ${entityName}Mapper ${entityName.toLowerCase()}Mapper;
 
-    @GetMapping("/{id}")
-    public ResponseEntity<${entityName}Dto> findById(@PathVariable ${idField.type} ${idField.name}) {
-        return ResponseEntity.ok(${entityName.toLowerCase()}Mapper.toDto(${serviceName.substring(0, 1).toLowerCase() + serviceName.substring(1)}.findById(${idField.name})));
-    }
-
-    @GetMapping
-    public ResponseEntity<List<${entityName}Dto>> findAll() {
-        return ResponseEntity.ok(${serviceName.substring(0, 1).toLowerCase() + serviceName.substring(1)}.findAll().stream().map(${entityName.toLowerCase()}Mapper::toDto).collect(Collectors.toList()));
-    }
-
-    @PostMapping("/filter")
-    public Page<${entityName}> filterMovies(
-            @RequestBody Map<String, Map<String, Object>> filters,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        Pageable pageable = PageRequest.of(page, size);
-        return ${serviceName.substring(0, 1).toLowerCase() + serviceName.substring(1)}.filterMovies(filters, pageable);
+    @GetMapping("/find")
+    public ResponseEntity<${entityName}Dto> findByKeys(
+${requestParams}) {
+        CryptocurrencyKey key = new CryptocurrencyKey();
+${keySetters}
+        return ResponseEntity.ok(${entityName.toLowerCase()}Mapper.toDto(${serviceName.substring(0, 1).toLowerCase() + serviceName.substring(1)}.findByKeys(key)));
     }
 }
 `;
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/controller/${controllerName}.java`, content);
 };
 
-
-// Generar MovieDto.java
+// Generar CryptocurrencyDto.java
 const generateDto = () => {
   const { packageName, dtoName, entityFields } = config;
   const fields = entityFields.map(field => `    private ${field.type} ${field.name};`).join('\n');
@@ -519,43 +451,7 @@ ${fields}
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/dto/${dtoName}.java`, content);
 };
 
-// Generar MovieGroupedDTO.java
-const generateGroupedDto = () => {
-  const { packageName, entityName } = config;
-  const content = `
-package ${packageName}.dto;
-
-public class ${entityName}GroupedDTO {
-    private String field;
-    private Long count;
-
-    public ${entityName}GroupedDTO(String field, Long count) {
-        this.field = field;
-        this.count = count;
-    }
-
-    // Getters y setters
-    public String getField() {
-        return field;
-    }
-
-    public void setField(String field) {
-        this.field = field;
-    }
-
-    public Long getCount() {
-        return count;
-    }
-
-    public void setCount(Long count) {
-        this.count = count;
-    }
-}
-`;
-  writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/dto/${entityName}GroupedDTO.java`, content);
-};
-
-// Generar MovieMapper.java
+// Generar CryptocurrencyMapper.java
 const generateMapper = () => {
   const { packageName, entityName, dtoName } = config;
   const content = `
@@ -576,7 +472,7 @@ public interface ${entityName}Mapper {
 
 // Generar ResourceNotFoundException.java
 const generateException = () => {
-  const { packageName, exceptionName} = config;
+  const { packageName, exceptionName } = config;
   const content = `
 package ${packageName}.exception;
 
@@ -589,7 +485,7 @@ public class ${exceptionName} extends RuntimeException {
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/exception/${exceptionName}.java`, content);
 };
 
-// Generate BadRequestException.java
+// Generar BadRequestException.java
 const generateBadRequestException = () => {
   const { packageName, exceptionNameBadRequest } = config;
   const content = `
@@ -606,7 +502,7 @@ public class ${exceptionNameBadRequest} extends RuntimeException {
 
 // Generar GlobalExceptionHandler.java
 const generateExceptionHandler = () => {
-  const { packageName, handlerName, exceptionName ,exceptionNameBadRequest } = config;
+  const { packageName, handlerName, exceptionName, exceptionNameBadRequest } = config;
   const content = `
 package ${packageName}.exception;
 
@@ -642,26 +538,38 @@ ex.getName(), ex.getValue(), ex.getRequiredType().getSimpleName());
 
 // Generar schema.sql
 const generateSchemaSql = () => {
+  const { tableName, entityFields } = config;
+
+  const columns = entityFields.map(field => {
+    let columnDefinition = `${field.name} ${mapJavaTypeToSqlType(field.type)}`;
+    if (field.isNotNull === 'Y') {
+      columnDefinition += ' NOT NULL';
+    }
+    return columnDefinition;
+  }).join(',\n    ');
+
+  const primaryKeys = entityFields
+    .filter(field => field.isPrimaryKey === 'Y')
+    .map(field => field.name)
+    .join(', ');
+
   const content = `
-CREATE TABLE movies (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    genre VARCHAR(255) NOT NULL,
-    releaseYear INT NOT NULL,
-    rating DOUBLE NOT NULL
+CREATE TABLE ${tableName} (
+    ${columns},
+    PRIMARY KEY (${primaryKeys})
 );
   `;
   writeToFile(`${projectDir}/src/main/resources/schema.sql`, content);
 };
 
-// Generar data.sql
-const generateDataSql = () => {
-  const content = `
-INSERT INTO movies (title, genre, releaseYear, rating) VALUES
-('The Matrix', 'Sci-Fi', 1999, 8.7),
-('The Godfather', 'Crime', 1972, 9.2);
-  `;
-  writeToFile(`${projectDir}/src/main/resources/data.sql`, content);
+// Función para mapear tipos de Java a tipos de SQL
+const mapJavaTypeToSqlType = (javaType) => {
+  const typeMap = {
+    "Long": "BIGINT",
+    "String": "VARCHAR(255)",
+    "Double": "DOUBLE"
+  };
+  return typeMap[javaType] || javaType.toUpperCase();
 };
 
 // Ejecutar la generación de todos los archivos
@@ -669,18 +577,18 @@ const generateProjectFiles = () => {
   generatePomXml();
   generateApplicationProperties();
   generateAppClass();
+  generateCryptocurrencyId();
   generateModel();
+  generateCryptocurrencyKey();
   generateRepository();
   generateService();
   generateController();
   generateDto();
-  generateGroupedDto();
   generateMapper();
   generateException();
   generateBadRequestException();
   generateExceptionHandler();
   generateSchemaSql();
-  generateDataSql();
 };
 
 generateProjectFiles();
