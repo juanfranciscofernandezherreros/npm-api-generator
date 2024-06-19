@@ -18,7 +18,10 @@ fs.readFile('config.json', 'utf8', (err, data) => {
     }
 
     // Cuenta las claves primarias en entityFields
-    const primaryKeyCount = config.entityFields.filter(field => field.isPrimaryKey === 'Y').length;
+    const primaryKeys = config.entityFields.filter(field => field.isPrimaryKey === 'Y');
+    const primaryKeyCount = primaryKeys.length;
+    
+    const primaryKey = primaryKeys.length === 1 ? primaryKeys[0] : null;
 
     // Función para ejecutar scripts
     const executeScript = (script, configFile) => {
@@ -34,6 +37,16 @@ fs.readFile('config.json', 'utf8', (err, data) => {
         });
     };
 
-    executeScript('apiUnique.js', 'config.json')
-
+    if (primaryKeyCount === 1 && primaryKey.type === 'Long' && primaryKey.name === 'id') {
+        console.log('Hay una única clave primaria del tipo Long con el nombre "id".');
+        executeScript('apiLong.js', 'config.json');
+    } else if (primaryKeyCount === 1 && (primaryKey.type !== 'Long' || primaryKey.name !== 'id')) {
+        console.log('Hay una única clave primaria, pero no es del tipo Long o no se llama "id".');
+        executeScript('apiUnique.js', 'config.json');
+    } else if (primaryKeyCount > 1) {
+        console.log('Hay múltiples claves primarias.');
+        executeScript('apiDocker.js', 'config.json');
+    } else {
+        console.log('No hay claves primarias definidas.');
+    }
 });

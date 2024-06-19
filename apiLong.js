@@ -470,16 +470,6 @@ const mapJavaTypeToSqlType = (javaType) => {
   return typeMap[javaType] || javaType.toUpperCase();
 };
 
-// Generar data.sql
-const generateDataSql = () => {
-  const content = `
-INSERT INTO cryptocurrencies (id, symbol, names, currentprice, marketcap, circulatingsupply, totalsupply, maxsupply, change24h) VALUES
-(1, 'BTC', 'Bitcoin', 60000.0, 1200000000000.0, 19000000.0, 21000000.0, 21000000.0, -2.5),
-(2, 'ETH', 'Ethereum', 4000.0, 500000000000.0, 115000000.0, 115000000.0, NULL, -1.5);
-  `;
-  writeToFile(`${projectDir}/src/main/resources/data.sql`, content);
-};
-
 // Ejecutar la generación de todos los archivos
 const generateProjectFiles = () => {
   generatePomXml();
@@ -495,7 +485,6 @@ const generateProjectFiles = () => {
   generateBadRequestException();
   generateExceptionHandler();
   generateSchemaSql();
-  generateDataSql();
 };
 
 generateProjectFiles();

@@ -304,8 +304,8 @@ ${nonPrimaryKeyFields}
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/model/${entityName}.java`, content);
 };
 
-// Generar CryptocurrencyKey.java dinámicamente
-const generateCryptocurrencyKey = () => {
+// Generar WrapperKey.java dinámicamente
+const generateWrapperKey = () => {
   const { packageName, entityFields } = config;
   
   const primaryKeys = entityFields
@@ -319,11 +319,11 @@ package ${packageName}.dto;
 import lombok.Data;
 
 @Data
-public class CryptocurrencyKey {
+public class WrapperKey {
 ${primaryKeys}
 }
 `;
-  writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/dto/CryptocurrencyKey.java`, content);
+  writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/dto/WrapperKey.java`, content);
 };
 
 // Generar CryptocurrencyRepository.java
@@ -359,7 +359,7 @@ package ${packageName}.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.stereotype.Service;
-import ${packageName}.dto.CryptocurrencyKey;
+import ${packageName}.dto.WrapperKey;
 import ${packageName}.model.${entityName};
 import ${packageName}.model.${entityName}Id;
 import ${packageName}.repository.${repositoryName};
@@ -371,7 +371,7 @@ public class ${serviceName} {
     @Autowired
     private ${repositoryName} ${repositoryName.substring(0, 1).toLowerCase() + repositoryName.substring(1)};
 
-    public ${entityName} findByKeys(CryptocurrencyKey key) throws ResourceNotFoundException {
+    public ${entityName} findByKeys(WrapperKey key) throws ResourceNotFoundException {
         ${entityName}Id id = new ${entityName}Id();
 ${primaryKeySetters}
         ${entityName} probe = new ${entityName}();
@@ -406,7 +406,7 @@ package ${packageName}.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ${packageName}.dto.CryptocurrencyKey;
+import ${packageName}.dto.WrapperKey;
 import ${packageName}.dto.${entityName}Dto;
 import ${packageName}.mapper.${entityName}Mapper;
 import ${packageName}.service.${serviceName};
@@ -424,7 +424,7 @@ public class ${controllerName} {
     @GetMapping("/find")
     public ResponseEntity<${entityName}Dto> findByKeys(
 ${requestParams}) {
-        CryptocurrencyKey key = new CryptocurrencyKey();
+        WrapperKey key = new WrapperKey();
 ${keySetters}
         return ResponseEntity.ok(${entityName.toLowerCase()}Mapper.toDto(${serviceName.substring(0, 1).toLowerCase() + serviceName.substring(1)}.findByKeys(key)));
     }
@@ -579,7 +579,7 @@ const generateProjectFiles = () => {
   generateAppClass();
   generateCryptocurrencyId();
   generateModel();
-  generateCryptocurrencyKey();
+  generateWrapperKey();
   generateRepository();
   generateService();
   generateController();
