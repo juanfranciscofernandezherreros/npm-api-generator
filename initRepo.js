@@ -81,6 +81,15 @@ async function initRepo(remoteUrl) {
       console.log('Switched to branch master');
     }
 
+    // Verificar si el remoto 'origin' ya existe y eliminarlo si es necesario
+    const remotes = await git.getRemotes(true);
+    const originRemote = remotes.find(remote => remote.name === 'origin');
+
+    if (originRemote) {
+      await git.removeRemote('origin');
+      console.log('Removed existing remote origin');
+    }
+
     // Añadir el nuevo remoto
     await git.addRemote('origin', remoteUrl);
     console.log(`Added remote origin: ${remoteUrl}`);
