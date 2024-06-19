@@ -3,13 +3,13 @@ const axios = require('axios');
 const simpleGit = require('simple-git');
 const git = simpleGit();
 
-// Obtiene el token de acceso personal desde la variable de entorno
-const githubToken = process.env.GITHUB_TOKEN;
-const repoName = 'tu_repositorio';
+// Configura tu token de acceso personal
+const githubToken = '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'; // Reemplaza con tu token real
+const repoName = 'usuarios-q';
 const username = 'juanfranciscofernandezherreros';
 
 if (!githubToken) {
-  console.error('Error: No se ha encontrado el token de GitHub en las variables de entorno.');
+  console.error('Error: No se ha encontrado el token de GitHub.');
   process.exit(1);
 }
 
@@ -30,8 +30,8 @@ async function createRepo() {
       return existingRepo.data.clone_url;
     }
   } catch (error) {
-    // Si el error es porque el repositorio no existe, continuamos con la creación
     if (error.response && error.response.status === 404) {
+      // Si el repositorio no existe, proceder a crearlo
       try {
         const response = await axios.post(
           `https://api.github.com/user/repos`,
@@ -48,11 +48,11 @@ async function createRepo() {
         console.log(`Created repository ${repoName} on GitHub`);
         return response.data.clone_url;
       } catch (creationError) {
-        console.error('Error creating repository on GitHub', creationError);
+        console.error('Error creating repository on GitHub', creationError.response.data);
         throw creationError;
       }
     } else {
-      console.error('Error checking repository existence on GitHub', error);
+      console.error('Error checking repository existence on GitHub', error.response.data);
       throw error;
     }
   }
@@ -60,50 +60,34 @@ async function createRepo() {
 
 async function initRepo(remoteUrl) {
   try {
+    // Inicializar el repositorio localmente y configurarlo
+    await git.init();
+    console.log('Initialized empty Git repository');
+
     // Crear un archivo README.md
     fs.writeFileSync('README.md', '# Proyecto\n\nEste es el README del proyecto.');
     console.log('Created README.md file');
 
-    // Inicializa un nuevo repositorio Git
-    await git.init();
-    console.log('Initialized empty Git repository');
-
-    // Añade todos los archivos al repositorio
+    // Añadir todos los archivos al repositorio
     await git.add('.');
     console.log('Added files to repository');
 
-    // Realiza el primer commit
+    // Realiza el primer commit en master
     await git.commit('Initial commit');
     console.log('Committed files');
 
-    // Crear y cambiar a la rama master si no existe
-    const branches = await git.branch();
-    if (!branches.all.includes('master')) {
-      await git.checkoutLocalBranch('master');
-      console.log('Created and switched to branch master');
-    } else {
-      await git.checkout('master');
-      console.log('Switched to branch master');
-    }
-
-    // Verificar si el remoto 'origin' ya existe y eliminarlo si es necesario
-    const remotes = await git.getRemotes(true);
-    const originRemote = remotes.find(remote => remote.name === 'origin');
-
-    if (originRemote) {
-      await git.removeRemote('origin');
-      console.log('Removed existing remote origin');
-    }
-
-    // Añadir el nuevo remoto
+    // Crear y empujar la rama master
+    await git.branch(['-M', 'master']);
     await git.addRemote('origin', remoteUrl);
-    console.log(`Added remote origin: ${remoteUrl}`);
+    await git.push('origin', 'master');
+    console.log('Pushed master branch to remote repository');
 
-    // Empuja los cambios al repositorio remoto con force
-    await git.push('origin', 'master', { '--force': null });
-    console.log('Pushed to remote repository with force');
-  } catch (err) {
-    console.error('Error initializing repository', err);
+    // Crear y empujar la rama develop
+    await git.checkoutLocalBranch('develop');
+    await git.push('origin', 'develop');
+    console.log('Pushed develop branch to remote repository');
+  } catch (error) {
+    console.error('Error initializing repository or pushing branches', error);
   }
 }
 
