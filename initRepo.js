@@ -70,6 +70,7 @@ async function createRepo() {
 async function initRepo(remoteUrl) {
   try {
     const remoteName = generateRandomRemoteName();
+    console.log(`Using remote name: ${remoteName}`);
 
     await git.init();
     console.log('Initialized empty Git repository');
@@ -80,17 +81,23 @@ async function initRepo(remoteUrl) {
     await git.add('.');
     console.log('Added files to repository');
 
-    await git.commit('Initial commit');
-    console.log('Committed files');
+    const commitResult = await git.commit('Initial commit');
+    console.log('Committed files:', commitResult);
 
     await git.branch(['-M', 'master']);
+    console.log('Renamed branch to master');
+
     await git.addRemote(remoteName, remoteUrl);
-    await git.push(remoteName, 'master');
-    console.log(`Pushed master branch to remote repository with remote name ${remoteName}`);
+    console.log(`Added remote ${remoteName} with URL ${remoteUrl}`);
+
+    const pushMasterResult = await git.push(remoteName, 'master');
+    console.log('Pushed master branch to remote repository:', pushMasterResult);
 
     await git.checkoutLocalBranch('develop');
-    await git.push(remoteName, 'develop');
-    console.log(`Pushed develop branch to remote repository with remote name ${remoteName}`);
+    console.log('Created and switched to develop branch');
+
+    const pushDevelopResult = await git.push(remoteName, 'develop');
+    console.log('Pushed develop branch to remote repository:', pushDevelopResult);
   } catch (error) {
     console.error('Error initializing repository or pushing branches:', error);
   }
