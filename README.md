@@ -1,3 +1,3 @@
-# Proyecto
+# mi-repositorio
 
-Este es el README del proyecto.
+Este es el README para mi-repositorio.
