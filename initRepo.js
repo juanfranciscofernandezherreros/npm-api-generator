@@ -5,7 +5,7 @@ const git = simpleGit();
 
 // Obtiene el token de acceso personal desde la variable de entorno
 const githubToken = process.env.GITHUB_TOKEN;
-const repoName = 'tu_repositorio2';
+const repoName = 'tu_repositorio';
 const username = 'juanfranciscofernandezherreros';
 
 if (!githubToken) {
