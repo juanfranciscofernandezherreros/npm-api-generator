@@ -3,10 +3,15 @@ const axios = require('axios');
 const simpleGit = require('simple-git');
 const git = simpleGit();
 
-// Configura tu token de acceso personal y el nombre del repositorio
-const githubToken = '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';
+// Obtiene el token de acceso personal desde la variable de entorno
+const githubToken = process.env.GITHUB_TOKEN;
 const repoName = 'tu_repositorio';
 const username = 'juanfranciscofernandezherreros';
+
+if (!githubToken) {
+  console.error('Error: No se ha encontrado el token de GitHub en las variables de entorno.');
+  process.exit(1);
+}
 
 async function createRepo() {
   try {
