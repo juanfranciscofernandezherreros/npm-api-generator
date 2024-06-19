@@ -10,23 +10,46 @@ const username = 'juanfranciscofernandezherreros';
 
 async function createRepo() {
   try {
-    const response = await axios.post(
-      `https://api.github.com/user/repos`,
-      {
-        name: repoName,
-        private: false,
-      },
+    // Verificar si el repositorio ya existe
+    const existingRepo = await axios.get(
+      `https://api.github.com/repos/${username}/${repoName}`,
       {
         headers: {
           Authorization: `token ${githubToken}`,
         },
       }
     );
-    console.log(`Created repository ${repoName} on GitHub`);
-    return response.data.clone_url;
+
+    if (existingRepo.data) {
+      console.log(`Repository ${repoName} already exists on GitHub`);
+      return existingRepo.data.clone_url;
+    }
   } catch (error) {
-    console.error('Error creating repository on GitHub', error);
-    throw error;
+    // Si el error es porque el repositorio no existe, continuamos con la creación
+    if (error.response && error.response.status === 404) {
+      try {
+        const response = await axios.post(
+          `https://api.github.com/user/repos`,
+          {
+            name: repoName,
+            private: false,
+          },
+          {
+            headers: {
+              Authorization: `token ${githubToken}`,
+            },
+          }
+        );
+        console.log(`Created repository ${repoName} on GitHub`);
+        return response.data.clone_url;
+      } catch (creationError) {
+        console.error('Error creating repository on GitHub', creationError);
+        throw creationError;
+      }
+    } else {
+      console.error('Error checking repository existence on GitHub', error);
+      throw error;
+    }
   }
 }
 
