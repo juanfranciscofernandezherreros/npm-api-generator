@@ -19,6 +19,11 @@ if (!repoName || !username) {
   process.exit(1);
 }
 
+// Función para generar un nombre aleatorio para el remoto
+function generateRandomRemoteName() {
+  return 'remote_' + Math.random().toString(36).substring(2, 15);
+}
+
 async function createRepo() {
   try {
     const existingRepo = await axios.get(
@@ -64,6 +69,8 @@ async function createRepo() {
 
 async function initRepo(remoteUrl) {
   try {
+    const remoteName = generateRandomRemoteName();
+
     await git.init();
     console.log('Initialized empty Git repository');
 
@@ -77,13 +84,13 @@ async function initRepo(remoteUrl) {
     console.log('Committed files');
 
     await git.branch(['-M', 'master']);
-    await git.addRemote('origin', remoteUrl);
-    await git.push('origin', 'master');
-    console.log('Pushed master branch to remote repository');
+    await git.addRemote(remoteName, remoteUrl);
+    await git.push(remoteName, 'master');
+    console.log(`Pushed master branch to remote repository with remote name ${remoteName}`);
 
     await git.checkoutLocalBranch('develop');
-    await git.push('origin', 'develop');
-    console.log('Pushed develop branch to remote repository');
+    await git.push(remoteName, 'develop');
+    console.log(`Pushed develop branch to remote repository with remote name ${remoteName}`);
   } catch (error) {
     console.error('Error initializing repository or pushing branches:', error);
   }
