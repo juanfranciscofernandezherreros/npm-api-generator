@@ -1,3 +1,3 @@
-# CryptoPortfolioManager
+# Proyecto
 
-Descripción del repositorio
+Este es el README del proyecto.
