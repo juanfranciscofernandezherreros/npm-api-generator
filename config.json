@@ -1,5 +1,8 @@
 {
-  "projectName": "usuarios-q",
+  "projectName": "usuarios1",
+  "username": "xxxx",
+  "newBranchName": "feature-branch",
+  "targetDirectory": "usuarios1",
   "packageName": "com.ceca.ealUsusUsuarios",
   "appClassName": "EalUsusUsuariosApplication",
   "entityName": "EalUsusUsuarios",
@@ -14,7 +17,7 @@
   "entityFields": [
     {"type": "String", "name": "apellidos", "nameEntity":"apellidos","isPrimaryKey": "N", "isNotNull": "N", "columnName": "APELLIDOS"},
     {"type": "String", "name": "codUsuario", "nameEntity":"codUsuario","isPrimaryKey": "Y", "isNotNull": "N", "columnName": "COD_USUARIO"},
-    {"type": "String", "name": "codPerfil", "nameEntity":"codPerfil","isPrimaryKey": "N", "isNotNull": "N", "columnName": "COD_PERFIL"},
+    {"type": "String", "name": "codPerfil", "nameEntity":"codPerfil","isPrimaryKey": "Y", "isNotNull": "N", "columnName": "COD_PERFIL"},
     {"type": "String", "name": "bicEntidad","nameEntity":"bicEntidad", "isPrimaryKey": "N", "isNotNull": "N", "columnName": "BIC_ENTIDAD"},
     {"type": "String", "name": "idInternoEntidad", "nameEntity":"idInternoEntidad","isPrimaryKey": "N", "isNotNull": "N", "columnName": "ID_INTERNO_ENTIDAD"},
     {"type": "String", "name": "codEstado", "nameEntity":"codEstado","isPrimaryKey": "N", "isNotNull": "N", "columnName": "COD_ESTADO"},

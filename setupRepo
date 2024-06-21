@@ -1,0 +1,54 @@
+const axios = require('axios');
+
+const githubToken = process.env.GITHUB_TOKEN;
+
+if (!githubToken) {
+  console.error('Error: No se ha encontrado el token de GitHub.');
+  process.exit(1);
+}
+
+async function setupRepo(repoName, username) {
+  if (!repoName || !username) {
+    console.error('Error: Debes proporcionar el nombre del repositorio y el nombre de usuario.');
+    console.log('Uso: node setupRepo.js <repoName> <username>');
+    process.exit(1);
+  }
+
+  try {
+    // Comprobar si el repositorio ya existe
+    const existingRepo = await axios.get(
+      `https://api.github.com/repos/${username}/${repoName}`,
+      {
+        headers: {
+          Authorization: `token ${githubToken}`,
+        },
+      }
+    ).catch(() => null);
+
+    if (existingRepo && existingRepo.data) {
+      console.log(`Repository ${repoName} already exists on GitHub`);
+    } else {
+      // Crear el repositorio si no existe
+      const response = await axios.post(
+        `https://api.github.com/user/repos`,
+        {
+          name: repoName,
+          private: false,
+        },
+        {
+          headers: {
+            Authorization: `token ${githubToken}`,
+          },
+        }
+      );
+      console.log(`Created repository ${repoName} on GitHub`);
+      console.log(`Clone URL: ${response.data.clone_url}`);
+    }
+
+  } catch (error) {
+    console.error('Error:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+}
+
+module.exports = setupRepo;

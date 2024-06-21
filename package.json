@@ -1,7 +1,12 @@
 {
+  "name": "git-setup",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "setup:repo": "node index.js"
+  },
   "dependencies": {
-    "axios": "^1.7.2",
-    "fs": "^0.0.1-security",
-    "simple-git": "^3.25.0"
+    "axios": "^0.21.1"
   }
 }
