@@ -7,6 +7,7 @@
     "setup:repo": "node index.js"
   },
   "dependencies": {
-    "axios": "^0.21.1"
+    "axios": "^0.21.1",
+    "oracledb": "^6.5.1"
   }
 }
