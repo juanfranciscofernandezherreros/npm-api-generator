@@ -96,13 +96,13 @@ fs.readFile(jsonFilePath, 'utf8', (err, data) => {
     // Llama a otros scripts según la configuración de las claves primarias
     if (primaryKeyCount === 1 && primaryKey.type === 'Long' && primaryKey.name === 'id') {
         console.log('Hay una única clave primaria del tipo Long con el nombre "id".');
-        executeScript('apiJdbc.js', jsonFilePath);
+        executeScript('apiLong.js', jsonFilePath);
     } else if (primaryKeyCount === 1 && (primaryKey.type !== 'Long' || primaryKey.name !== 'id')) {
         console.log('Hay una única clave primaria, pero no es del tipo Long o no se llama "id".');
-        executeScript('apiJdbc.js', jsonFilePath);
+        executeScript('apiUnique.js', jsonFilePath);
     } else if (primaryKeyCount > 1) {
         console.log('Hay múltiples claves primarias.');
-        executeScript('apiJdbc.js', jsonFilePath);
+        executeScript('apiDpcker.js', jsonFilePath);
     } else {
         console.log('No hay claves primarias definidas.');
     }
