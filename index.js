@@ -102,7 +102,7 @@ fs.readFile(jsonFilePath, 'utf8', (err, data) => {
         executeScript('apiUnique.js', jsonFilePath);
     } else if (primaryKeyCount > 1) {
         console.log('Hay múltiples claves primarias.');
-        executeScript('apiDpcker.js', jsonFilePath);
+        executeScript('apiDocker.js', jsonFilePath);
     } else {
         console.log('No hay claves primarias definidas.');
     }

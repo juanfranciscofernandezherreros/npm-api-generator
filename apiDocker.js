@@ -107,7 +107,8 @@ const generatePomXml = () => {
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</dependency>
+            <scope>test</scope>
+		</dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
@@ -1173,8 +1174,6 @@ const generateProjectFiles = () => {
   generateDockerfile();
   generateDockerignore();
   generateReadme();
-  generateControllerTest();
-  generateServiceTest();
 };
 
 generateProjectFiles();

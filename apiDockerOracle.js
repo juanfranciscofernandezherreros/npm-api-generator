@@ -32,9 +32,7 @@ const subDirs = [
 // Construir directorios usando el nombre del paquete
 const buildDirs = (subDirs, config) => {
   const packagePath = packageToPath(config.packageName);
-  return subDirs.map(dir => `${config.projectName}/src/main/java/${packagePath}/${dir}`).concat(
-    subDirs.map(dir => `${config.projectName}/src/test/java/${packagePath}/${dir}`)
-  ).concat(`${config.projectName}/src/main/resources`);
+  return subDirs.map(dir => `${config.projectName}/src/main/java/${packagePath}/${dir}`).concat(`${config.projectName}/src/main/resources`);
 };
 
 // Función para capitalizar la primera letra
@@ -75,7 +73,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://www.apache.org/xsd/
 <artifactId>${config.projectName.toLowerCase()}</artifactId>
 <version>0.0.1-SNAPSHOT</version>
 <packaging>jar</packaging>
-<description>Demo project for Spring Boot with Oracle Database</description>
+<description>Demo project for Spring Boot with H2 Database</description>
 <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
@@ -84,7 +82,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://www.apache.org/xsd/
 </parent>
 <properties>
     <java.version>1.8</java.version>
-    <junit.jupiter.version>5.7.0</junit.jupiter.version>
 </properties>
 <dependencies>
     <dependency>
@@ -100,41 +97,21 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://www.apache.org/xsd/
         <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
     <dependency>
-        <groupId>com.oracle.database.jdbc</groupId>
-        <artifactId>ojdbc8</artifactId>
+        <groupId>com.h2database</groupId>
+        <artifactId>h2</artifactId>
         <scope>runtime</scope>
     </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-test</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-engine</artifactId>
-        <version>\${junit.jupiter.version}</version>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-api</artifactId>
-        <version>\${junit.jupiter.version}</version>
-        <scope>test</scope>
-    </dependency>
-    <!-- SpringDoc OpenAPI dependency -->
     <dependency>
         <groupId>org.springdoc</groupId>
         <artifactId>springdoc-openapi-ui</artifactId>
         <version>1.6.15</version>
     </dependency>
-    <!-- Lombok dependency -->
     <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
         <version>1.18.20</version>
         <scope>provided</scope>
     </dependency>
-    <!-- MapStruct dependencies -->
     <dependency>
         <groupId>org.mapstruct</groupId>
         <artifactId>mapstruct</artifactId>
@@ -177,32 +154,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://www.apache.org/xsd/
                 </annotationProcessorPaths>
             </configuration>
         </plugin>
-        <plugin>
-            <groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.8.7</version>
-            <executions>
-                <execution>
-                    <goals>
-                        <goal>prepare-agent</goal>
-                    </goals>
-                </execution>
-                <execution>
-                    <id>report</id>
-                    <phase>prepare-package</phase>
-                    <goals>
-                        <goal>report</goal>
-                    </goals>
-                </execution>
-            </executions>
-            <configuration>
-                <excludes>
-                    <exclude>**/*_$$_*</exclude>
-                    <exclude>**/*_Lombok*.*</exclude>
-                    <exclude>**/*$GeneratedByLombok*.*</exclude>
-                </excludes>
-            </configuration>
-        </plugin>
     </plugins>
 </build>
 </project>
@@ -214,15 +165,15 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://www.apache.org/xsd/
 const generateApplicationProperties = () => {
   const { username, password, host } = config.databaseConfig;
   const content = `
-# Oracle Database configuration
+# H2 Database configuration
 spring.datasource.url=${host}
-spring.datasource.driverClassName=oracle.jdbc.OracleDriver
+spring.datasource.driverClassName=org.h2.Driver
 spring.datasource.username=${username}
 spring.datasource.password=${password}
-spring.jpa.database-platform=org.hibernate.dialect.Oracle12cDialect
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
 
 # Ensure that schema.sql and data.sql are always run
-spring.datasource.initialization-mode=none
+spring.datasource.initialization-mode=always
 spring.jpa.hibernate.ddl-auto=none
 
 # Logging configuration
@@ -252,7 +203,7 @@ public class SearchCriteriaDTO {
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/dto/SearchCriteriaDTO.java`, content);
 };
 
-// Generar LibraryManagerApplication.java
+// Generar UsuariosApplication.java
 const generateAppClass = () => {
   const { packageName, appClassName } = config;
   const content = `
@@ -272,8 +223,8 @@ public class ${appClassName} {
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/${appClassName}.java`, content);
 };
 
-// Generar BookId.java (Clave compuesta)
-const generateBookId = () => {
+// Generar UsuariosId.java (Clave compuesta)
+const generateUsuariosId = () => {
   const { packageName, entityName, entityFields } = config;
 
   const primaryKeyFields = entityFields
@@ -409,7 +360,7 @@ ${primaryKeys}
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/dto/WrapperKey.java`, content);
 };
 
-// Generar BookRepository.java
+// Generar UsuariosRepository.java
 const generateRepository = () => {
   const { packageName, repositoryName, entityName } = config;
 
@@ -550,7 +501,7 @@ ${primaryKeySetters}
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/service/${serviceName}.java`, content);
 };
 
-// Generar BookController.java
+// Generar UsuariosController.java
 const generateController = () => {
   const { packageName, controllerName, serviceName, entityName, urlName, entityFields , findByKeys, search } = config;
 
@@ -615,7 +566,7 @@ ${keySetters}
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/controller/${controllerName}.java`, content);
 };
 
-// Generar BookDto.java
+// Generar UsuariosDto.java
 const generateDto = () => {
   const { packageName, dtoName, entityFields } = config;
   const fields = entityFields.map(field => `    private ${field.type} ${field.name};`).join('\n');
@@ -633,7 +584,7 @@ ${fields}
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/dto/${dtoName}.java`, content);
 };
 
-// Generar BookMapper.java
+// Generar UsuariosMapper.java
 const generateMapper = () => {
   const { packageName, entityName, dtoName, mapperName, entityFields } = config;
 
@@ -778,72 +729,11 @@ CREATE TABLE ${tableName} (
 const mapJavaTypeToSqlType = (javaType) => {
   const typeMap = {
     "Long": "NUMBER(19)",
-    "String": "VARCHAR2(255)",
+    "String": "VARCHAR(255)",
     "Double": "FLOAT",
     "Integer": "NUMBER(10)"
   };
   return typeMap[javaType] || javaType.toUpperCase();
-};
-
-// Generar Dockerfile
-const generateDockerfile = () => {
-  const artifactId = config.projectName.toLowerCase();
-  const version = "0.0.1-SNAPSHOT";
-  const packaging = "jar";
-  const jarFileName = `${artifactId}-${version}.${packaging}`;
-
-  const content = `
-# Etapa 1: Construcción
-FROM maven:3.8.6-openjdk-8 AS build
-
-# Establecer el directorio de trabajo en /app
-WORKDIR /app
-
-# Copiar el archivo de configuración de Maven
-COPY pom.xml .
-
-# Descargar las dependencias necesarias para la construcción
-RUN mvn dependency:go-offline
-
-# Copiar el resto del código fuente
-COPY src ./src
-
-# Construir el proyecto
-RUN mvn clean package
-
-# Etapa 2: Ejecución
-FROM openjdk:8-jdk-alpine
-
-# Establecer el directorio de trabajo en /app
-WORKDIR /app
-
-# Copiar el archivo JAR de la etapa de construcción
-COPY --from=build /app/target/${jarFileName} ${jarFileName}
-
-# Exponer el puerto en el que la aplicación se ejecutará
-EXPOSE 8080
-
-# Ejecutar la aplicación
-ENTRYPOINT ["java", "-jar", "${jarFileName}"]
-
-  `;
-  writeToFile(`${projectDir}/Dockerfile`, content);
-};
-
-// Generar .dockerignore
-const generateDockerignore = () => {
-  const content = `
-target/
-*.jar
-*.war
-*.zip
-*.tar.gz
-*.iml
-.DS_Store
-.idea/
-.git/
-  `;
-  writeToFile(`${projectDir}/.dockerignore`, content);
 };
 
 // Generar README.md
@@ -868,7 +758,7 @@ const generateReadme = () => {
   const content = `
 # ${projectName}
 
-Este proyecto es una aplicación Spring Boot con una base de datos Oracle integrada.
+Este proyecto es una aplicación Spring Boot con una base de datos H2 integrada.
 
 ## Configuración
 
@@ -884,10 +774,10 @@ mvn clean package
 
 ## Ejecución
 
-Para ejecutar el proyecto, usa Docker Compose:
+Para ejecutar el proyecto, usa:
 
 \`\`\`bash
-docker-compose up
+mvn spring-boot:run
 \`\`\`
 
 ## Endpoints
@@ -917,7 +807,7 @@ const generateProjectFiles = () => {
   generateApplicationProperties();
   generateSearchCriteriaDTO();
   generateAppClass();
-  generateBookId();
+  generateUsuariosId();
   generateModel();
   generateWrapperKey();
   generateRepository();
@@ -929,8 +819,6 @@ const generateProjectFiles = () => {
   generateBadRequestException();
   generateExceptionHandler();
   generateSchemaSql();
-  generateDockerfile();
-  generateDockerignore();
   generateReadme();
 };
 
