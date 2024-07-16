@@ -78,10 +78,18 @@ fs.readFile(jsonFilePath, 'utf8', (err, data) => {
     const primaryKeyCount = primaryKeys.length;
     const primaryKey = primaryKeys.length === 1 ? primaryKeys[0] : null;
 
+    // Define el directorio de salida
+    const outputDir = path.join('C:', 'Proyectos', 'output-migration');
+
+    // Crear el directorio de salida si no existe
+    if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+    }
+
     // Función para ejecutar scripts
     const executeScript = (script, ...args) => {
-        const command = `node ${script} ${args.join(' ')}`;
-        exec(command, (err, stdout, stderr) => {
+        const command = `node ${path.resolve(script)} ${args.join(' ')}`;
+        exec(command, { cwd: outputDir }, (err, stdout, stderr) => {
             if (err) {
                 console.error(`Error ejecutando ${script}: ${err}`);
                 return;
@@ -97,6 +105,9 @@ fs.readFile(jsonFilePath, 'utf8', (err, data) => {
     if (primaryKeyCount === 1 && primaryKey.type === 'Long' && primaryKey.name === 'id') {
         console.log('Hay una única clave primaria del tipo Long con el nombre "id".');
         executeScript('apiLong.js', jsonFilePath);
+    } else if (primaryKeyCount === 1 && primaryKey.type === 'Long' && primaryKey.name !== 'id') {
+        console.log('Hay una única clave primaria del tipo Long con una primary key que no sea id');
+        executeScript('apiLongUnique.js', jsonFilePath);
     } else if (primaryKeyCount === 1 && (primaryKey.type !== 'Long' || primaryKey.name !== 'id')) {
         console.log('Hay una única clave primaria, pero no es del tipo Long o no se llama "id".');
         executeScript('apiUnique.js', jsonFilePath);

@@ -64,3 +64,8 @@
     "host": "jdbc:h2:mem:testdb"
   }
 }
+
+npm run setup:repo C:\Proyectos\proyecto-csv-json\output\example_table-q.json
+
+npm run setup:kafkaProd C:\Proyectos\proyecto-csv-json\output\example_table-q.json
+  

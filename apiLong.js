@@ -63,8 +63,8 @@ const writeToFile = (fileName, content) => {
   console.log(`Archivo ${fileName} generado exitosamente.`);
 };
 
-// Generar pom.xml
 const generatePomXml = () => {
+  const { username, password, host, databaseName, driverClassName, platform } = config.databaseConfig;
   const content = `
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://www.apache.org/xsd/maven-4.0.0.xsd">
@@ -74,7 +74,7 @@ const generatePomXml = () => {
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>${config.projectName}</name>
-    <description>Demo project for Spring Boot with H2 Database</description>
+    <description>Demo project for Spring Boot with Database</description>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -97,11 +97,30 @@ const generatePomXml = () => {
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
+        <!-- Check for MySQL dialect and add MySQL dependency if needed -->
+        ${platform === 'org.hibernate.dialect.MySQL8Dialect' ? `
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        ` : ''}
+        <!-- Check for H2 dialect and add H2 dependency if needed -->
+        ${platform === 'org.hibernate.dialect.H2Dialect' ? `
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
         </dependency>
+        ` : ''}
+        <!-- Check for Oracle dialect and add Oracle dependency if needed -->
+        ${platform === 'org.hibernate.dialect.Oracle12cDialect' ? `
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc8</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        ` : ''}
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -166,20 +185,43 @@ const generatePomXml = () => {
         </plugins>
     </build>
 </project>`;
+
   writeToFile(`${projectDir}/pom.xml`, content);
 };
 
-// Generar application.properties
 const generateApplicationProperties = () => {
-  const { username, password, host } = config.databaseConfig;
+  const { username, password, host, driverClassName, platform } = config.databaseConfig;
+  const isMySQL = platform === 'org.hibernate.dialect.MySQL8Dialect';
+  const isH2 = platform === 'org.hibernate.dialect.H2Dialect';
+  const isOracle = platform === 'org.hibernate.dialect.Oracle12cDialect';
+
   const content = `
-# H2 Database configuration
+${isMySQL ? `
+# MySQL Database configuration
 spring.datasource.url=${host}
-spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.driverClassName=${driverClassName}
 spring.datasource.username=${username}
 spring.datasource.password=${password}
-spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
-spring.h2.console.enabled=true
+spring.jpa.database-platform=${platform}
+` : ''}
+
+${isH2 ? `
+# H2 Database configuration
+spring.datasource.url=${host}
+spring.datasource.driverClassName=${driverClassName}
+spring.datasource.username=${username}
+spring.datasource.password=${password}
+spring.jpa.database-platform=${platform}
+` : ''}
+
+${isOracle ? `
+# Oracle Database configuration
+spring.datasource.url=${host}
+spring.datasource.driverClassName=${driverClassName}
+spring.datasource.username=${username}
+spring.datasource.password=${password}
+spring.jpa.database-platform=${platform}
+` : ''}
 
 # Ensure that schema.sql and data.sql are always run
 spring.datasource.initialization-mode=always
@@ -189,6 +231,7 @@ spring.jpa.hibernate.ddl-auto=none
 logging.file.name=logs/application.log
 logging.level.${config.packageName}=INFO
 `;
+
   writeToFile(`${projectDir}/src/main/resources/application.properties`, content);
 };
 
@@ -216,6 +259,7 @@ public class ${appClassName} {
 const generateModel = () => {
   const { packageName, entityName, entityFields, tableName } = config;
 
+  const imports = getImports(entityFields);
   const fields = entityFields.map(field => {
     let annotations = '';
     if (field.isPrimaryKey === 'Y') {
@@ -235,6 +279,7 @@ package ${packageName}.model;
 
 import javax.persistence.*;
 import lombok.Data;
+${imports}
 
 @Entity
 @Table(name = "${tableName}")
@@ -334,12 +379,14 @@ public class ${controllerName} {
 // Generar CryptocurrencyDto.java
 const generateDto = () => {
   const { packageName, dtoName, entityFields } = config;
+  const imports = getImports(entityFields);
   const fields = entityFields.map(field => `    private ${field.type} ${field.name};`).join('\n');
 
   const content = `
 package ${packageName}.dto;
 
 import lombok.Data;
+${imports}
 
 @Data
 public class ${dtoName} {
@@ -465,9 +512,37 @@ const mapJavaTypeToSqlType = (javaType) => {
   const typeMap = {
     "Long": "BIGINT",
     "String": "VARCHAR(255)",
-    "Double": "DOUBLE"
+    "Double": "DOUBLE",
+    "BigDecimal": "DECIMAL(19,2)",
+    "Date": "DATE",
+    "Timestamp": "TIMESTAMP",
+    "Time": "TIME",
+    "Year": "YEAR",
+    "Set": "SET"
   };
   return typeMap[javaType] || javaType.toUpperCase();
+};
+
+// Función para obtener las importaciones necesarias
+const getImports = (entityFields) => {
+  const importMap = {
+    "BigDecimal": "import java.math.BigDecimal;",
+    "Date": "import java.util.Date;",
+    "Timestamp": "import java.sql.Timestamp;",
+    "Time": "import java.sql.Time;",
+    "Year": "import java.time.Year;",
+    "Set<String>": "import java.util.Set;",
+    "Object": "import java.lang.Object;"
+  };
+
+  const imports = new Set();
+  entityFields.forEach(field => {
+    if (importMap[field.type]) {
+      imports.add(importMap[field.type]);
+    }
+  });
+
+  return Array.from(imports).join('\n');
 };
 
 // Ejecutar la generación de todos los archivos

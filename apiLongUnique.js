@@ -258,6 +258,7 @@ public class ${appClassName} {
 // Generar Cryptocurrency.java
 const generateModel = () => {
   const { packageName, entityName, entityFields, tableName } = config;
+
   const imports = getImports(entityFields);
   const fields = entityFields.map(field => {
     let annotations = '';
@@ -267,7 +268,9 @@ const generateModel = () => {
         annotations += '    @GeneratedValue(strategy = GenerationType.IDENTITY)\n';
       }
     }
-    annotations += `    @Column(name = "${field.columnName}", nullable = ${field.isNotNull === 'Y' ? 'false' : 'true'})\n`;
+    if (field.isNotNull === 'Y') {
+      annotations += '    @Column(nullable = false)\n';
+    }
     return `${annotations}    private ${field.type} ${field.name};`;
   }).join('\n');
 
@@ -277,6 +280,7 @@ package ${packageName}.model;
 import javax.persistence.*;
 import lombok.Data;
 ${imports}
+
 @Entity
 @Table(name = "${tableName}")
 @Data
@@ -363,7 +367,7 @@ public class ${controllerName} {
     @Autowired
     private ${entityName}Mapper ${entityName.toLowerCase()}Mapper;
 
-    @GetMapping("/{${primaryKey.name}}")
+    @GetMapping("/{id}")
     public ResponseEntity<${entityName}Dto> findById(@PathVariable ${primaryKey.type} ${primaryKey.name}) {
         return ResponseEntity.ok(${entityName.toLowerCase()}Mapper.toDto(${serviceName.substring(0, 1).toLowerCase() + serviceName.substring(1)}.findById(${primaryKey.name})));
     }
@@ -372,15 +376,31 @@ public class ${controllerName} {
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/controller/${controllerName}.java`, content);
 };
 
-// Generar CryptocurrencyDto.java
+// Generar Batch_step_executionDto.java
 const generateDto = () => {
   const { packageName, dtoName, entityFields } = config;
+
+  // Function to determine if an import is needed and generate the import statement
+  const getImports = (fields) => {
+    const types = new Set(fields.map(field => field.type));
+    const imports = [];
+    if (types.has('LocalDate')) {
+      imports.push('import java.time.LocalDate;');
+    }
+    if (types.has('Timestamp')) {
+      imports.push('import java.sql.Timestamp;');
+    }
+    return imports.join('\n');
+  };
+
+  const imports = getImports(entityFields);
   const fields = entityFields.map(field => `    private ${field.type} ${field.name};`).join('\n');
 
   const content = `
 package ${packageName}.dto;
 
 import lombok.Data;
+${imports}
 
 @Data
 public class ${dtoName} {
@@ -475,6 +495,48 @@ ex.getName(), ex.getValue(), ex.getRequiredType().getSimpleName());
   writeToFile(`${projectDir}/src/main/java/${packageToPath(packageName)}/exception/${handlerName}.java`, content);
 };
 
+// Generar schema.sql
+const generateSchemaSql = () => {
+  const { tableName, entityFields } = config;
+
+  const columns = entityFields.map(field => {
+    let columnDefinition = `${field.name} ${mapJavaTypeToSqlType(field.type)}`;
+    if (field.isNotNull === 'Y') {
+      columnDefinition += ' NOT NULL';
+    }
+    return columnDefinition;
+  }).join(',\n    ');
+
+  const primaryKey = entityFields
+    .filter(field => field.isPrimaryKey === 'Y')
+    .map(field => field.name)
+    .join(', ');
+
+  const content = `
+CREATE TABLE ${tableName} (
+    ${columns},
+    PRIMARY KEY (${primaryKey})
+);
+  `;
+  writeToFile(`${projectDir}/src/main/resources/schema.sql`, content);
+};
+
+// Función para mapear tipos de Java a tipos de SQL
+const mapJavaTypeToSqlType = (javaType) => {
+  const typeMap = {
+    "Long": "BIGINT",
+    "String": "VARCHAR(255)",
+    "Double": "DOUBLE",
+    "BigDecimal": "DECIMAL(19,2)",
+    "Date": "DATE",
+    "Timestamp": "TIMESTAMP",
+    "Time": "TIME",
+    "Year": "YEAR",
+    "Set": "SET"
+  };
+  return typeMap[javaType] || javaType.toUpperCase();
+};
+
 // Función para obtener las importaciones necesarias
 const getImports = (entityFields) => {
   const importMap = {
@@ -511,6 +573,7 @@ const generateProjectFiles = () => {
   generateException();
   generateBadRequestException();
   generateExceptionHandler();
+  generateSchemaSql();
 };
 
 generateProjectFiles();
