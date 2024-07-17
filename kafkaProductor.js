@@ -40,7 +40,7 @@ const main = () => {
 };
 
 const generateProjectFiles = (config, projectDir) => {
-  generators.generatePomXml(config, projectDir);
+  generators.generatePomXmlKafka(config, projectDir);
   generators.generateApplicationPropertiesKafkaProducer(config, projectDir);
   generators.generateKafkaConfig(config, projectDir);
   generators.generateAppClass(config, projectDir);

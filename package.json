@@ -6,7 +6,7 @@
   "scripts": {
     "setup:repo": "node index.js",
     "setup:kafkaProd": "node kafkaProductor.js",
-	"setup:kafkaConsumer": "node kafkaConsumer.js"
+	  "setup:kafkaConsumer": "node kafkaConsumer.js"
   },
   "dependencies": {
     "axios": "^0.21.1", 

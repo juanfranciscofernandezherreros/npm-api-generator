@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 @Service
 public class ${serviceName} {
 
-    private static final String TOPIC = "testear-actividad-usuario";
+    private static final String TOPIC = "TEST_MY_TOPIC";
     private static final Logger logger = LoggerFactory.getLogger(${serviceName}.class);
 
     @Autowired
