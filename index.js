@@ -1,120 +1,58 @@
 const fs = require('fs');
-const { exec } = require('child_process');
 const path = require('path');
+const { getConfig, packageToPath, writeToFile } = require('./fileUtils');
+const generators = require('./generators');
 
-// Verifica si se proporcionó la ruta del archivo JSON como argumento
-if (process.argv.length < 3) {
-    console.error('Uso: node index.js <ruta_al_archivo_json>');
+const main = () => {
+  const configPath = process.argv[2];
+  if (!configPath) {
+    console.error('No se ha proporcionado la ruta del archivo de configuración.');
     process.exit(1);
-}
+  }
 
-// Obtener la ruta absoluta del archivo JSON desde los argumentos
-const jsonFilePath = path.resolve(process.argv[2]);
+  const config = getConfig(configPath);
+  const projectDir = config.projectName;
 
-// Función para validar el esquema del JSON
-const validateSchema = (config) => {
-    const requiredFields = [
-        "projectName", "username", "newBranchName", "targetDirectory", "packageName", 
-        "appClassName", "entityName", "repositoryName", "serviceName", "controllerName", 
-        "exceptionName", "exceptionNameBadRequest", "handlerName", "dtoName", "mapperName", 
-        "entityFields", "tableName", "urlName", "findByKeys", "search", "databaseConfig"
-    ];
+  if (!fs.existsSync(projectDir)) {
+    fs.mkdirSync(projectDir, { recursive: true });
+  }
 
-    const missingFields = requiredFields.filter(field => !config.hasOwnProperty(field));
+  const subDirs = [
+    'controller',
+    'exception',
+    'model',
+    'repository',
+    'service',
+    'config',
+    'dto',
+    'mapper'
+  ];
 
-    if (missingFields.length > 0) {
-        console.error(`Faltan los siguientes campos requeridos en el archivo JSON: ${missingFields.join(', ')}`);
-        return false;
+  const dirs = subDirs.map(dir => `${projectDir}/src/main/java/${packageToPath(config.packageName)}/${dir}`).concat(`${projectDir}/src/main/resources`);
+
+  dirs.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
+  });
 
-    if (!Array.isArray(config.entityFields)) {
-        console.error('El campo "entityFields" debe ser un arreglo.');
-        return false;
-    }
+  generateProjectFiles(config, projectDir);
+};
 
-    const requiredEntityFieldProps = ["type", "name", "nameEntity", "isPrimaryKey", "isNotNull", "columnName"];
-    const missingEntityFieldProps = [];
+const generateProjectFiles = (config, projectDir) => {
+  generators.generatePomXml(config, projectDir);
+  generators.generateApplicationProperties(config, projectDir);
+  generators.generateAppClass(config, projectDir);
+  generators.generateModel(config, projectDir);
+  generators.generateRepository(config, projectDir);
+  generators.generateService(config, projectDir);
+  generators.generateController(config, projectDir);
+  generators.generateDto(config, projectDir);
+  generators.generateMapper(config, projectDir);
+  generators.generateException(config, projectDir);
+  generators.generateBadRequestException(config, projectDir);
+  generators.generateExceptionHandler(config, projectDir);
+  generators.generateSchemaSql(config, projectDir);
+};
 
-    config.entityFields.forEach((entityField, index) => {
-        requiredEntityFieldProps.forEach(prop => {
-            if (!entityField.hasOwnProperty(prop)) {
-                missingEntityFieldProps.push(`entityFields[${index}].${prop}`);
-            }
-        });
-    });
-
-    if (missingEntityFieldProps.length > 0) {
-        console.error(`Faltan los siguientes campos requeridos en los objetos de "entityFields": ${missingEntityFieldProps.join(', ')}`);
-        return false;
-    }
-
-    return true;
-}
-
-// Lee el archivo JSON
-fs.readFile(jsonFilePath, 'utf8', (err, data) => {
-    if (err) {
-        console.error('Error al leer el archivo:', err);
-        return;
-    }
-
-    // Parsea el contenido JSON
-    let config;
-    try {
-        config = JSON.parse(data);
-    } catch (parseErr) {
-        console.error('Error al parsear el archivo JSON:', parseErr);
-        return;
-    }
-
-    // Validar el esquema del JSON
-    if (!validateSchema(config)) {
-        console.error('El archivo JSON no cumple con el esquema esperado.');
-        return;
-    }
-
-    // Cuenta las claves primarias en entityFields
-    const primaryKeys = config.entityFields.filter(field => field.isPrimaryKey === 'Y');
-    const primaryKeyCount = primaryKeys.length;
-    const primaryKey = primaryKeys.length === 1 ? primaryKeys[0] : null;
-
-    // Define el directorio de salida
-    const outputDir = path.join('C:', 'Proyectos', 'output-migration');
-
-    // Crear el directorio de salida si no existe
-    if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-    }
-
-    // Función para ejecutar scripts
-    const executeScript = (script, ...args) => {
-        const command = `node ${path.resolve(script)} ${args.join(' ')}`;
-        exec(command, { cwd: outputDir }, (err, stdout, stderr) => {
-            if (err) {
-                console.error(`Error ejecutando ${script}: ${err}`);
-                return;
-            }
-            console.log(`Salida de ${script}:\n${stdout}`);
-            if (stderr) {
-                console.error(`Error de ${script}:\n${stderr}`);
-            }
-        });
-    };
-
-    // Llama a otros scripts según la configuración de las claves primarias
-    if (primaryKeyCount === 1 && primaryKey.type === 'Long' && primaryKey.name === 'id') {
-        console.log('Hay una única clave primaria del tipo Long con el nombre "id".');
-        executeScript('apiLong.js', jsonFilePath);
-    } else if (primaryKeyCount === 1 && primaryKey.type === 'Long' && primaryKey.name !== 'id') {
-        console.log('Hay una única clave primaria del tipo Long con una primary key que no sea id');
-        executeScript('apiLongUnique.js', jsonFilePath);
-    } else if (primaryKeyCount === 1 && (primaryKey.type !== 'Long' || primaryKey.name !== 'id')) {
-        console.log('Hay una única clave primaria, pero no es del tipo Long o no se llama "id".');
-        executeScript('apiUnique.js', jsonFilePath);
-    } else if (primaryKeyCount > 1) {
-        console.log('Hay múltiples claves primarias.');
-        executeScript('apiDocker.js', jsonFilePath);
-    } else {
-        console.log('No hay claves primarias definidas.');
-    }
-});
+main();

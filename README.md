@@ -65,7 +65,7 @@
   }
 }
 
-npm run setup:repo C:\Proyectos\proyecto-csv-json\output\example_table-q.json
+npm run setup:repo C:\Proyectos\csv-to-json\output\eal_entis_param.json
 
 npm run setup:kafkaProd C:\Proyectos\proyecto-csv-json\output\example_table-q.json
   
