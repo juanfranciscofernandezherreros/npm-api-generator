@@ -18,13 +18,9 @@ const main = () => {
   }
 
   const subDirs = [
-    'controller',
-    'exception',
     'model',
     'repository',
     'service',
-    'config',
-    'dto',
     'mapper'
   ];
 
@@ -39,11 +35,11 @@ const main = () => {
   generateProjectFiles(config, projectDir);
 };
 
-const generateProjectFiles = (config, projectDir) => {
+const generateProjectFiles = (config, projectDir,topicName,serviceName) => {
   generators.generatePomXmlKafka(config, projectDir);
   generators.generateApplicationPropertiesKafkaConsumer(config, projectDir);
   generators.generateAppClass(config, projectDir);
-  generators.generateConsumerKafka(config, projectDir);
+  generators.generateConsumerKafka(config, projectDir,topicName,serviceName);
 };
 
 main();

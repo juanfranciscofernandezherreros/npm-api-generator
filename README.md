@@ -136,7 +136,7 @@ npm run setup:kafkaProd C:\Proyectos\proyecto-csv-json\output\example_table-q.js
     "host": "jdbc:h2:mem:testdb"
   }
 }
----
+--- JSON FILE KAFKA CONFIG TOPIC PRODUCER---
 {
   "projectName": "myProject",
   "packageName": "com.fernandez.myProject",
@@ -146,4 +146,27 @@ npm run setup:kafkaProd C:\Proyectos\proyecto-csv-json\output\example_table-q.js
   "host": "localhost:9092",
   "appClassName": "myProjectApplication",
   "controllerName": "myProjectController"
+}
+------- JSON FILE KAFKA CONFIG TOPIC PRODUCER---
+
+{
+  "projectName": "myProject",
+  "packageName": "com.fernandez.myProject",
+  "serviceName": "KafkaService",
+  "topicName": "my_topic",
+  "totalPartitions": 4,
+  "host": "localhost:9092",
+  "appClassName": "myProjectApplication",
+}
+
+------- JSON CONSUMER 
+
+{
+  "projectName": "myProject",
+  "packageName": "com.fernandez.myProject",
+  "serviceName": "KafkaService",
+  "topicName": "my_topic",
+  "totalPartitions": 4,
+  "host": "localhost:9092",
+  "appClassName": "myProjectApplication",
 }
