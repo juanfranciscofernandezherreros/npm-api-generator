@@ -1,6 +1,6 @@
 const { writeToFile } = require('../fileUtils');
 
-const generatePomXmlKafka = (config, projectDir) => {
+const generatePomXmlKStream = (config, projectDir) => {
   const content = `
 
   <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -110,4 +110,4 @@ const generatePomXmlKafka = (config, projectDir) => {
   writeToFile(`${projectDir}/pom.xml`, content);
 };
 
-module.exports = generatePomXmlKafka;
+module.exports = generatePomXmlKStream;

@@ -170,3 +170,16 @@ npm run setup:kafkaProd C:\Proyectos\proyecto-csv-json\output\example_table-q.js
   "host": "localhost:9092",
   "appClassName": "myProjectApplication",
 }
+
+--- KSTREAM
+
+{
+  "projectName": "myProject",
+  "packageName": "com.fernandez.myProject",
+  "serviceName": "KafkaService",
+  "totalPartitions": 4,
+  "host": "localhost:9092",
+  "inputTopic" : "input-topic",
+  "outputTopic" : "output-topic",
+  "appClassName": "myProjectApplication"
+}

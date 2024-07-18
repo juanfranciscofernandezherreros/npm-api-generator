@@ -16,8 +16,11 @@ const generateControllerKafka = require('./generateControllerKafka');
 const generateServiceKafka = require('./generateServiceKafka');
 const generateKafkaConfig = require('./generateKafkaConfig');
 const generatePomXmlKafka = require('./generatePomXmlKafka');
+const generatePomXmlKStream = require('./generatePomXmlKStream');
 const generateConsumerKafka = require('./generateConsumerKafka');
 const generateApplicationPropertiesKafkaConsumer = require('./generateApplicationPropertiesKafkaConsumer');
+const generateApplicationPropertiesKStream = require('./generateApplicationPropertiesKStream');
+const generateKafkaConfigKStream = require('./generateKafkaConfigKStream');
 
 module.exports = {
   generateAppClass,
@@ -38,6 +41,9 @@ module.exports = {
   generateServiceKafka,
   generateKafkaConfig,
   generatePomXmlKafka,
+  generatePomXmlKStream,
   generateConsumerKafka,
-  generateApplicationPropertiesKafkaConsumer
+  generateApplicationPropertiesKafkaConsumer,
+  generateApplicationPropertiesKStream,
+  generateKafkaConfigKStream
 };
