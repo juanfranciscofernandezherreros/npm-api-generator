@@ -1,5 +1,4 @@
 const fs = require('fs');
-const path = require('path');
 const { getConfig, packageToPath } = require('./fileUtils');
 const generators = require('./generators');
 
@@ -40,9 +39,10 @@ const main = () => {
 };
 
 const generateProjectFiles = (config, projectDir) => {
+  const { topicName, totalPartitions, host } = config;
   generators.generatePomXmlKafka(config, projectDir);
   generators.generateApplicationPropertiesKafkaProducer(config, projectDir);
-  generators.generateKafkaConfig(config, projectDir);
+  generators.generateKafkaConfig(config, projectDir, topicName, totalPartitions, host);
   generators.generateAppClass(config, projectDir);
   generators.generateServiceKafka(config, projectDir);
   generators.generateControllerKafka(config, projectDir);

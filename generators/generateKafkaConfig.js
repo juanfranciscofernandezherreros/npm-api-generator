@@ -1,7 +1,7 @@
 const { writeToFile, packageToPath } = require('../fileUtils');
 
 const generateKafkaConfig = (config, projectDir) => {
-  const { packageName } = config;
+  const { packageName, topicName, totalPartitions, host } = config;
   const content = `
 package ${packageName}.config;
 
@@ -25,7 +25,7 @@ public class KafkaConfig {
     @Bean
     public ProducerFactory<String, String> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
-        configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "${host}");
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         return new DefaultKafkaProducerFactory<>(configProps);
@@ -39,13 +39,13 @@ public class KafkaConfig {
     @Bean
     public KafkaAdmin kafkaAdmin() {
         Map<String, Object> configs = new HashMap<>();
-        configs.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        configs.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, "${host}");
         return new KafkaAdmin(configs);
     }
 
     @Bean
     public NewTopic topic1() {
-        return new NewTopic("TEST_MY_TOPIC", 4, (short) 1); // "my_topic" is the topic name, 1 partition, 1 replication factor
+        return new NewTopic("${topicName}", ${totalPartitions}, (short) 1); // Using topicName and totalPartitions parameters
     }
 }
 `;

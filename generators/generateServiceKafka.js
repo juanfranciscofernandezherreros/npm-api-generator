@@ -1,7 +1,7 @@
 const { writeToFile, packageToPath } = require('../fileUtils');
 
 const generateServiceKafka = (config, projectDir) => {
-  const { packageName, serviceName } = config;
+  const { packageName, serviceName, topicName } = config;
 
   const content = `
 package ${packageName}.service;
@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 @Service
 public class ${serviceName} {
 
-    private static final String TOPIC = "TEST_MY_TOPIC";
+    private static final String TOPIC = "${topicName}";
     private static final Logger logger = LoggerFactory.getLogger(${serviceName}.class);
 
     @Autowired

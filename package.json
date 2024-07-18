@@ -4,12 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "setup:repo": "node index.js",
+    "index": "node index.js",
+    "setup:repo": "node apis.js",
     "setup:kafkaProd": "node kafkaProductor.js",
-	  "setup:kafkaConsumer": "node kafkaConsumer.js"
+    "setup:kafkaConsumer": "node kafkaConsumer.js"
   },
   "dependencies": {
-    "axios": "^0.21.1", 
+    "axios": "^0.21.1",
+    "inquirer": "^10.0.2",
     "oracledb": "^6.5.1"
   }
 }

@@ -1,58 +1,46 @@
-const fs = require('fs');
-const path = require('path');
-const { getConfig, packageToPath, writeToFile } = require('./fileUtils');
-const generators = require('./generators');
+const inquirer = require('inquirer');
 
-const main = () => {
-  const configPath = process.argv[2];
-  if (!configPath) {
-    console.error('No se ha proporcionado la ruta del archivo de configuración.');
-    process.exit(1);
-  }
+const options = [
+  'Generar archivo de propiedades de Kafka',
+  'Generar servicio productor de Kafka',
+  'Generar servicio consumidor de Kafka',
+  'Salir'
+];
 
-  const config = getConfig(configPath);
-  const projectDir = config.projectName;
-
-  if (!fs.existsSync(projectDir)) {
-    fs.mkdirSync(projectDir, { recursive: true });
-  }
-
-  const subDirs = [
-    'controller',
-    'exception',
-    'model',
-    'repository',
-    'service',
-    'config',
-    'dto',
-    'mapper'
-  ];
-
-  const dirs = subDirs.map(dir => `${projectDir}/src/main/java/${packageToPath(config.packageName)}/${dir}`).concat(`${projectDir}/src/main/resources`);
-
-  dirs.forEach(dir => {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+const askUser = async () => {
+  const answer = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'option',
+      message: 'Seleccione una opción:',
+      choices: options
     }
-  });
+  ]);
 
-  generateProjectFiles(config, projectDir);
+  switch (answer.option) {
+    case 'Generar archivo de propiedades de Kafka':
+      console.log('Generando archivo de propiedades de Kafka...');
+      // Llama a tu función para generar el archivo de propiedades de Kafka
+      break;
+    case 'Generar servicio productor de Kafka':
+      console.log('Generando servicio productor de Kafka...');
+      // Llama a tu función para generar el servicio productor de Kafka
+      break;
+    case 'Generar servicio consumidor de Kafka':
+      console.log('Generando servicio consumidor de Kafka...');
+      // Llama a tu función para generar el servicio consumidor de Kafka
+      break;
+    case 'Salir':
+      console.log('Saliendo...');
+      process.exit();
+      break;
+    default:
+      console.log('Opción no válida');
+      break;
+  }
+
+  // Volver a mostrar el menú después de ejecutar la opción
+  askUser();
 };
 
-const generateProjectFiles = (config, projectDir) => {
-  generators.generatePomXml(config, projectDir);
-  generators.generateApplicationProperties(config, projectDir);
-  generators.generateAppClass(config, projectDir);
-  generators.generateModel(config, projectDir);
-  generators.generateRepository(config, projectDir);
-  generators.generateService(config, projectDir);
-  generators.generateController(config, projectDir);
-  generators.generateDto(config, projectDir);
-  generators.generateMapper(config, projectDir);
-  generators.generateException(config, projectDir);
-  generators.generateBadRequestException(config, projectDir);
-  generators.generateExceptionHandler(config, projectDir);
-  generators.generateSchemaSql(config, projectDir);
-};
-
-main();
+askUser();
